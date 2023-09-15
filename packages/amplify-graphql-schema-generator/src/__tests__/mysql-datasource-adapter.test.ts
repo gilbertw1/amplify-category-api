@@ -196,6 +196,25 @@ describe('testDataSourceAdapter', () => {
     expect(graphqlSchema).toMatchSnapshot();
   });
 
+  it('test generate graphql schema on model with required, list enum field', () => {
+    const dbschema = new Schema(new Engine('MySQL'));
+
+    let model = new Model('Profile');
+    model.addField(new Field('id', { kind: 'NonNull', type: { kind: 'Scalar', name: 'Int' } }));
+    model.addField(new Field('name', { kind: 'Scalar', name: 'String' }));
+    model.addField(
+      new Field('types', {
+        kind: 'NonNull',
+        type: { kind: 'List', type: { kind: 'Enum', name: 'Profile_type', values: ['Manager', 'Employee'] } },
+      }),
+    );
+    model.setPrimaryKey(['id']);
+    dbschema.addModel(model);
+
+    const graphqlSchema = generateGraphQLSchema(dbschema);
+    expect(graphqlSchema).toMatchSnapshot();
+  });
+
   it('generates primary key fields as required without the default directive added', () => {
     const dbschema = new Schema(new Engine('MySQL'));
 

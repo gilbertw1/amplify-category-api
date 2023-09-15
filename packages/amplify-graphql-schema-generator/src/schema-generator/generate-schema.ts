@@ -1,6 +1,6 @@
 import { DirectiveWrapper, EnumWrapper, FieldWrapper, ObjectDefinitionWrapper } from '@aws-amplify/graphql-transformer-core';
 import { EnumValueDefinitionNode, Kind, print } from 'graphql';
-import { EnumType, Field, Index, Model, Schema } from '../schema-representation';
+import { EnumType, Field, FieldType, Index, Model, Schema } from '../schema-representation';
 
 export const generateGraphQLSchema = (schema: Schema): string => {
   const models = schema.getModels();
@@ -19,8 +19,10 @@ export const generateGraphQLSchema = (schema: Schema): string => {
     const fields = model.getFields();
     const primaryKeyFields = primaryKey?.getFields();
     fields.forEach((f) => {
-      if (f.type.kind === 'Enum') {
-        const enumType = constructEnumType(f.type);
+      // If inner field type is an enum then add a corresponding enum definition
+      const unwrappedType = unwrapType(f.type);
+      if (unwrappedType.kind === 'Enum') {
+        const enumType = constructEnumType(unwrappedType);
         document.definitions.push(enumType.serialize());
       }
 
@@ -261,4 +263,19 @@ export const isComputeExpression = (value: string) => {
     return true;
   }
   return false;
+};
+
+/**
+ * Recursively unwraps the supplied type. Returns the inner type by removing the wrapping
+ * `List` and `NonNull` types.
+ *
+ * @param type Type to unwrap
+ * @returns unwrapped inner type
+ */
+const unwrapType = (type: FieldType): FieldType => {
+  if (type.kind !== 'Scalar' && type.kind !== 'Custom' && type.kind !== 'Enum') {
+    return unwrapType(type.type);
+  } else {
+    return type;
+  }
 };
